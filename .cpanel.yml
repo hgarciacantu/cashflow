@@ -2,5 +2,6 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/linkewjr/public_html/cashflow
-    - /bin/rsync -av public/ $DEPLOYPATH
+    - /bin/cp index.html $DEPLOYPATH
+    - /bin/cp config.php $DEPLOYPATH
     #- /bin/cp -R images $DEPLOYPATH

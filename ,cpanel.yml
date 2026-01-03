@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/linkewjr/public_html/cashflow
+    - /bin/cp -R images $DEPLOYPATH

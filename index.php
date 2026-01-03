@@ -48,26 +48,146 @@
         </div>
 
         <div class="row g-4">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="card p-3">
+                        <small class="text-muted">GASTO DIARIO (ÚLTIMO PERIODO)</small>
+                        <h4 class="fw-bold text-danger">$<?php echo number_format(abs($gasto_diario), 2); ?></h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card p-3">
+                        <small class="text-muted">FRECUENCIA DE CAPTURA</small>
+                        <h4 class="fw-bold text-primary"><?php echo $dias_dif; ?> días</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card p-3">
+                        <small class="text-muted">GASTO PROMEDIO
+                            (<?php echo $anio_grafica === 'todos' ? 'TODOS' : $anio_grafica; ?>)</small>
+                        <h4 class="fw-bold <?php echo $gasto_promedio >= 0 ? 'text-success' : 'text-danger'; ?>">
+                            <?php echo $gasto_promedio >= 0 ? '+' : ''; ?>$<?php echo number_format($gasto_promedio, 2); ?>/día
+                        </h4>
+                    </div>
+                </div>
+            </div>
             <div class="col-lg-8">
-                <div class="card p-4 mb-4">
-                    <h5 class="fw-bold mb-4">Evolución del Patrimonio</h5>
-                    <canvas id="mainChart" height="120"></canvas>
+                <div class="card p-4 mb-4" style="height: 500px; display: flex; flex-direction: column;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <h5 class="fw-bold mb-0">Evolución del Patrimonio</h5>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary-emphasis" style="font-size: 0.75rem;">
+                                    Inicial: $<?php echo number_format($inicial_grafica, 2); ?>
+                                </span>
+                                <span class="badge bg-info-subtle text-info-emphasis" style="font-size: 0.75rem;">
+                                    Final: $<?php echo number_format($final_grafica, 2); ?>
+                                </span>
+                                <span class="badge bg-success-subtle text-success-emphasis" style="font-size: 0.75rem;">
+                                    Máx: $<?php echo number_format($max_grafica, 2); ?>
+                                </span>
+                                <span class="badge bg-danger-subtle text-danger-emphasis" style="font-size: 0.75rem;">
+                                    Mín: $<?php echo number_format($min_grafica, 2); ?>
+                                </span>
+                                <?php if($variacion_grafica != 0): ?>
+                                <span class="badge <?php echo $variacion_grafica > 0 ? 'bg-success' : 'bg-danger'; ?>"
+                                    style="font-size: 0.75rem;">
+                                    <?php echo $variacion_grafica > 0 ? '+' : ''; ?><?php echo number_format($variacion_grafica, 1); ?>%
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <form method="GET" class="d-flex gap-2">
+                            <select name="anio_grafica" class="form-select form-select-sm"
+                                onchange="this.form.submit()">
+                                <option value="todos"
+                                    <?php if(!isset($_GET['anio_grafica']) || $_GET['anio_grafica'] == 'todos') echo 'selected'; ?>>
+                                    Todos</option>
+                                <option value="2023"
+                                    <?php if(isset($_GET['anio_grafica']) && $_GET['anio_grafica'] == '2023') echo 'selected'; ?>>
+                                    2023</option>
+                                <option value="2024"
+                                    <?php if(isset($_GET['anio_grafica']) && $_GET['anio_grafica'] == '2024') echo 'selected'; ?>>
+                                    2024</option>
+                                <option value="2025"
+                                    <?php if(isset($_GET['anio_grafica']) && $_GET['anio_grafica'] == '2025') echo 'selected'; ?>>
+                                    2025</option>
+                                <option value="2026"
+                                    <?php if(isset($_GET['anio_grafica']) && $_GET['anio_grafica'] == '2026') echo 'selected'; ?>>
+                                    2026</option>
+                            </select>
+                        </form>
+                    </div>
+                    <div style="flex: 1; position: relative;">
+                        <canvas id="mainChart"></canvas>
+                    </div>
                 </div>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card p-4 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+                                <h5 class="fw-bold mb-0">Detalle de Capturas</h5>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="card p-3">
-                            <small class="text-muted">GASTO DIARIO (ÚLTIMO PERIODO)</small>
-                            <h4 class="fw-bold text-danger">$<?php echo number_format(abs($gasto_diario), 2); ?></h4>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card p-3">
-                            <small class="text-muted">FRECUENCIA DE CAPTURA</small>
-                            <h4 class="fw-bold text-primary"><?php echo $dias_dif; ?> días</h4>
+                                <form class="d-flex gap-2 align-items-center mt-2 mt-md-0" method="GET">
+                                    <select name="mes" class="form-select form-select-sm">
+                                        <?php
+                        $meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                        foreach ($meses as $i => $nombre):
+                            $val = str_pad($i + 1, 2, '0', STR_PAD_LEFT);
+                            echo "<option value='$val' ".($mes_filtro == $val ? 'selected' : '').">$nombre</option>";
+                        endforeach;
+                        ?>
+                                    </select>
+                                    <select name="anio" class="form-select form-select-sm">
+                                        <option value="2023" <?php if($anio_filtro == '2023') echo 'selected'; ?>>2023
+                                        </option>
+                                        <option value="2024" <?php if($anio_filtro == '2024') echo 'selected'; ?>>2024
+                                        </option>
+                                        <option value="2025" <?php if($anio_filtro == '2025') echo 'selected'; ?>>2025
+                                        </option>
+                                        <option value="2026" <?php if($anio_filtro == '2026') echo 'selected'; ?>>2026
+                                        </option>
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-secondary">Filtrar</button>
+                                </form>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Cuenta</th>
+                                            <th>Tipo</th>
+                                            <th class="text-end">Monto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($registros_tabla)): ?>
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted py-4">No hay capturas en este
+                                                periodo.</td>
+                                        </tr>
+                                        <?php else: ?>
+                                        <?php foreach ($registros_tabla as $reg): ?>
+                                        <tr>
+                                            <td><?php echo date('d/m/Y', strtotime($reg['fecha_captura'])); ?></td>
+                                            <td class="fw-bold"><?php echo htmlspecialchars($reg['cuenta']); ?></td>
+                                            <td><span
+                                                    class="badge bg-soft-primary text-primary border border-primary-subtle rounded-pill"><?php echo $reg['tipo']; ?></span>
+                                            </td>
+                                            <td class="text-end fw-bold">$<?php echo number_format($reg['monto'], 2); ?>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <div class="mt-4"></div>
             </div>
 
             <div class="col-lg-4">
@@ -138,6 +258,30 @@
                 fill: true,
                 backgroundColor: 'rgba(99, 102, 241, 0.1)'
             }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        maxTicksLimit: 10,
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Patrimonio: $' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
         }
     });
     </script>

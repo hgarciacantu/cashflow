@@ -1,17 +1,34 @@
 <?php
-// Conexión PDO (se mantiene igual que el anterior)
-$pdo = new PDO("mysql:host=localhost;dbname=linkewjr_cashflow_db;charset=utf8mb4", "roolinkewjr_casht", "Papa$2025.");
+// Conexión PDO con manejo de errores
+try {
+    $pdo = new PDO("mysql:host=localhost;dbname=linkewjr_cashflow_db;charset=utf8mb4", "roolinkewjr_casht", "Papa$2025.");
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Error de conexión: " . $e->getMessage());
+}
 
 // 1. Agregar nueva cuenta al catálogo
 if (isset($_POST['action']) && $_POST['action'] == 'nueva_cuenta') {
-    $stmt = $pdo->prepare("INSERT INTO cuentas (nombre, tipo) VALUES (?, ?)");
-    $stmt->execute([$_POST['nombre_cuenta'], $_POST['tipo_cuenta']]);
+    try {
+        $stmt = $pdo->prepare("INSERT INTO cuentas (nombre, tipo) VALUES (?, ?)");
+        $stmt->execute([$_POST['nombre_cuenta'], $_POST['tipo_cuenta']]);
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    } catch (PDOException $e) {
+        error_log("Error al agregar cuenta: " . $e->getMessage());
+    }
 }
 
 // 2. Capturar saldo de una cuenta
 if (isset($_POST['action']) && $_POST['action'] == 'nuevo_saldo') {
-    $stmt = $pdo->prepare("INSERT INTO saldos (cuenta_id, monto, fecha_captura) VALUES (?, ?, ?)");
-    $stmt->execute([$_POST['cuenta_id'], $_POST['monto'], $_POST['fecha']]);
+    try {
+        $stmt = $pdo->prepare("INSERT INTO saldos (cuenta_id, monto, fecha_captura) VALUES (?, ?, ?)");
+        $stmt->execute([$_POST['cuenta_id'], $_POST['monto'], $_POST['fecha']]);
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit;
+    } catch (PDOException $e) {
+        error_log("Error al guardar saldo: " . $e->getMessage());
+    }
 }
 
 // --- CONSULTAS PARA EL DASHBOARD ---

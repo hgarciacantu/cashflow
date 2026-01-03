@@ -1,7 +1,7 @@
 <?php
 // Conexión PDO con manejo de errores
 try {
-    $pdo = new PDO("mysql:host=localhost;dbname=linkewjr_cashflow_db;charset=utf8mb4", "roolinkewjr_casht", "Papa$2025.");
+    $pdo = new PDO("mysql:host=linkercard.com;dbname=linkewjr_cashflow_db;charset=utf8mb4", "roolinkewjr_casht", "Papa$2025.");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Error de conexión: " . $e->getMessage());

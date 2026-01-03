@@ -1,6 +1,6 @@
 <?php
 // Conexión PDO (se mantiene igual que el anterior)
-$pdo = new PDO("mysql:host=localhost;dbname=cashflow_db;charset=utf8mb4", "root", "");
+$pdo = new PDO("mysql:host=localhost;dbname=linkewjr_cashflow_db;charset=utf8mb4", "roolinkewjr_casht", "Papa$2025.");
 
 // 1. Agregar nueva cuenta al catálogo
 if (isset($_POST['action']) && $_POST['action'] == 'nueva_cuenta') {

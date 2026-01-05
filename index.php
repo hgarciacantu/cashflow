@@ -76,10 +76,7 @@
                         <h4 class="fw-bold <?php echo $variacion_mensual >= 0 ? 'text-success' : 'text-danger'; ?>">
                             <?php echo $variacion_mensual >= 0 ? '+' : ''; ?>$<?php echo number_format(abs($variacion_mensual), 2); ?>
                         </h4>
-                        <small class="<?php echo $variacion_mensual >= 0 ? 'text-success' : 'text-danger'; ?>">
-                            <?php echo $variacion_mensual >= 0 ? '↑' : '↓'; ?>
-                            <?php echo number_format(abs($variacion_mensual_porcentaje), 1); ?>%
-                        </small>
+
                     </div>
                 </div>
             </div>
@@ -109,9 +106,8 @@
                                 <?php endif; ?>
                             </div>
                         </div>
-                        <form method="GET" class="d-flex gap-2">
-                            <select name="anio_grafica" class="form-select form-select-sm"
-                                onchange="this.form.submit()">
+                        <form id="filtroPatrimonio" method="GET" class="d-flex gap-2">
+                            <select name="anio_grafica" class="form-select form-select-sm" id="anioGrafica">
                                 <option value="todos"
                                     <?php if(!isset($_GET['anio_grafica']) || $_GET['anio_grafica'] == 'todos') echo 'selected'; ?>>
                                     Todos</option>
@@ -132,11 +128,11 @@
                 <div class="card p-4 mb-4 mt-4" style="height: 400px; display: flex; flex-direction: column;">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="fw-bold mb-0">Evolución por Cuenta</h5>
-                        <form method="GET" class="d-flex gap-2">
+                        <form id="filtroCuenta" method="GET" class="d-flex gap-2">
                             <?php if(isset($_GET['anio_grafica'])): ?>
                             <input type="hidden" name="anio_grafica" value="<?php echo $_GET['anio_grafica']; ?>">
                             <?php endif; ?>
-                            <select name="cuenta_filtro" class="form-select form-select-sm">
+                            <select name="cuenta_filtro" class="form-select form-select-sm" id="cuentaFiltro">
                                 <option value="todas" <?php if($cuenta_filtro == 'todas') echo 'selected'; ?>>Todas las
                                     cuentas</option>
                                 <?php foreach($cuentas as $c): ?>
@@ -146,7 +142,7 @@
                                 </option>
                                 <?php endforeach; ?>
                             </select>
-                            <select name="anio_cuenta_filtro" class="form-select form-select-sm">
+                            <select name="anio_cuenta_filtro" class="form-select form-select-sm" id="anioCuentaFiltro">
                                 <option value="todos" <?php if($anio_cuenta_filtro == 'todos') echo 'selected'; ?>>Todos
                                 </option>
                                 <?php foreach($anios_disponibles as $anio): ?>
@@ -156,7 +152,6 @@
                                 </option>
                                 <?php endforeach; ?>
                             </select>
-                            <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
                         </form>
                     </div>
                     <div style="flex: 1; position: relative;">
@@ -176,8 +171,9 @@
                             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
                                 <h5 class="fw-bold mb-0">Detalle de Capturas</h5>
 
-                                <form class="d-flex gap-2 align-items-center mt-2 mt-md-0" method="GET">
-                                    <select name="mes" class="form-select form-select-sm">
+                                <form id="filtroTabla" class="d-flex gap-2 align-items-center mt-2 mt-md-0"
+                                    method="GET">
+                                    <select name="mes" class="form-select form-select-sm" id="mesFiltro">
                                         <?php
                         $meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
                         foreach ($meses as $i => $nombre):
@@ -186,7 +182,7 @@
                         endforeach;
                         ?>
                                     </select>
-                                    <select name="anio" class="form-select form-select-sm">
+                                    <select name="anio" class="form-select form-select-sm" id="anioFiltro">
                                         <?php foreach($anios_disponibles as $anio): ?>
                                         <option value="<?php echo $anio; ?>"
                                             <?php if($anio_filtro == $anio) echo 'selected'; ?>>
@@ -194,7 +190,6 @@
                                         </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <button type="submit" class="btn btn-sm btn-secondary">Filtrar</button>
                                 </form>
                             </div>
 
@@ -208,7 +203,7 @@
                                             <th class="text-end">Monto</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="tablaBody">
                                         <?php if (empty($registros_tabla)): ?>
                                         <tr>
                                             <td colspan="4" class="text-center text-muted py-4">No hay capturas en este
@@ -448,6 +443,201 @@
         }
     });
     <?php endif; ?>
+    <?php endif; ?>
+
+    // ========== AJAX HANDLERS ==========
+    let chartPatrimonio, chartCuenta;
+
+    // Filtro de gráfica de patrimonio
+    document.getElementById('anioGrafica').addEventListener('change', function() {
+        const anio = this.value;
+        fetch(`ajax_handler.php?action=grafica_patrimonio&anio_grafica=${anio}`)
+            .then(res => res.json())
+            .then(data => {
+                // Actualizar gráfica
+                chartPatrimonio.data.labels = data.data.map(d => d.mes);
+                chartPatrimonio.data.datasets[0].data = data.data.map(d => d.total);
+                chartPatrimonio.update();
+
+                // Actualizar badges
+                document.querySelector('.badge.bg-primary-subtle').innerHTML = 'Inicial: $' + Number(data
+                    .stats.inicial).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                document.querySelector('.badge.bg-info-subtle').innerHTML = 'Final: $' + Number(data.stats
+                    .final).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                document.querySelector('.badge.bg-success-subtle').innerHTML = 'Máx: $' + Number(data.stats
+                    .max).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                document.querySelector('.badge.bg-danger-subtle').innerHTML = 'Mín: $' + Number(data.stats
+                    .min).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+
+                // Actualizar card de variación mensual
+                const varCard = document.querySelector('.col-md-3:nth-child(4) .card h4');
+                const varSmall = document.querySelector('.col-md-3:nth-child(4) .card small');
+                const signo = data.stats.variacion_mensual >= 0 ? '+' : '';
+                varCard.className = 'fw-bold ' + (data.stats.variacion_mensual >= 0 ? 'text-success' :
+                    'text-danger');
+                varCard.innerHTML = signo + '$' + Number(Math.abs(data.stats.variacion_mensual))
+                    .toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                varSmall.className = data.stats.variacion_mensual >= 0 ? 'text-success' : 'text-danger';
+                varSmall.innerHTML = (data.stats.variacion_mensual >= 0 ? '↑' : '↓') + ' ' + Math.abs(data
+                    .stats.variacion_mensual_porcentaje).toFixed(1) + '%';
+            });
+    });
+
+    // Filtro de gráfica por cuenta
+    function actualizarGraficaCuenta() {
+        const cuenta = document.getElementById('cuentaFiltro').value;
+        const anio = document.getElementById('anioCuentaFiltro').value;
+
+        fetch(`ajax_handler.php?action=grafica_cuenta&cuenta_filtro=${cuenta}&anio_cuenta_filtro=${anio}`)
+            .then(res => res.json())
+            .then(data => {
+                const container = document.querySelector('#cuentaChart').parentElement;
+
+                if (data.data.length === 0) {
+                    container.innerHTML =
+                        '<div class="d-flex align-items-center justify-content-center h-100"><p class="text-muted">No hay datos para este filtro</p></div>';
+                    return;
+                }
+
+                if (!container.querySelector('canvas')) {
+                    container.innerHTML = '<canvas id="cuentaChart"></canvas>';
+                }
+
+                if (chartCuenta) {
+                    chartCuenta.destroy();
+                }
+
+                const ctx = document.getElementById('cuentaChart').getContext('2d');
+
+                if (data.tipo === 'todas') {
+                    // Múltiples cuentas
+                    const cuentasAgrupadas = {};
+                    data.data.forEach(reg => {
+                        if (!cuentasAgrupadas[reg.cuenta_id]) {
+                            cuentasAgrupadas[reg.cuenta_id] = {
+                                nombre: reg.cuenta_nombre,
+                                data: []
+                            };
+                        }
+                        cuentasAgrupadas[reg.cuenta_id].data.push({
+                            x: reg.mes,
+                            y: parseFloat(reg.monto)
+                        });
+                    });
+
+                    const colores = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+                    const datasets = Object.values(cuentasAgrupadas).map((cuenta, i) => ({
+                        label: cuenta.nombre,
+                        data: cuenta.data.map(d => d.y),
+                        borderColor: colores[i % colores.length],
+                        tension: 0.4,
+                        fill: false
+                    }));
+
+                    const todasFechas = [...new Set(data.data.map(d => d.mes))];
+
+                    chartCuenta = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: todasFechas,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    ticks: {
+                                        callback: v => '$' + v.toLocaleString()
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    // Una sola cuenta
+                    chartCuenta = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.data.map(d => d.mes),
+                            datasets: [{
+                                label: 'Saldo de Cuenta',
+                                data: data.data.map(d => d.monto),
+                                borderColor: '#10b981',
+                                tension: 0.4,
+                                fill: true,
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    ticks: {
+                                        callback: v => '$' + v.toLocaleString()
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+    }
+
+    document.getElementById('cuentaFiltro').addEventListener('change', actualizarGraficaCuenta);
+    document.getElementById('anioCuentaFiltro').addEventListener('change', actualizarGraficaCuenta);
+
+    // Filtro de tabla
+    function actualizarTabla() {
+        const mes = document.getElementById('mesFiltro').value;
+        const anio = document.getElementById('anioFiltro').value;
+
+        fetch(`ajax_handler.php?action=tabla_capturas&mes=${mes}&anio=${anio}`)
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('tablaBody');
+
+                if (data.data.length === 0) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="4" class="text-center text-muted py-4">No hay capturas en este periodo.</td></tr>';
+                } else {
+                    tbody.innerHTML = data.data.map(reg => `
+                        <tr>
+                            <td>${new Date(reg.fecha_captura).toLocaleDateString('es-MX')}</td>
+                            <td class="fw-bold">${reg.cuenta}</td>
+                            <td><span class="badge bg-soft-primary text-primary border border-primary-subtle rounded-pill">${reg.tipo}</span></td>
+                            <td class="text-end fw-bold">$${Number(reg.monto).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                    `).join('');
+                }
+            });
+    }
+
+    document.getElementById('mesFiltro').addEventListener('change', actualizarTabla);
+    document.getElementById('anioFiltro').addEventListener('change', actualizarTabla);
+
+    // Guardar referencias de las gráficas iniciales
+    chartPatrimonio = Chart.getChart('mainChart');
+    <?php if(!empty($grafica_cuenta_sql)): ?>
+    chartCuenta = Chart.getChart('cuentaChart');
     <?php endif; ?>
     </script>
 </body>

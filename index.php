@@ -1,4 +1,8 @@
-<?php require_once 'config.php'; ?>
+<?php 
+require_once 'auth.php';
+verificarAutenticacion();
+require_once 'config.php'; 
+?>
 <!DOCTYPE html>
 <html lang="es">
 
@@ -40,6 +44,12 @@
                 <p class="text-muted">Gestión de activos y flujo de caja</p>
             </div>
             <div class="col-md-4">
+                <div class="d-flex gap-2 justify-content-end mb-2">
+                    <span class="text-muted">👤 <?php echo htmlspecialchars($_SESSION['username']); ?></span>
+                    <a href="auth.php?logout=1" class="text-danger text-decoration-none" title="Cerrar sesión">
+                        Salir →
+                    </a>
+                </div>
                 <div class="card stat-card p-3 text-center">
                     <small class="opacity-75">BALANCE TOTAL</small>
                     <h2 class="fw-bold">$<?php echo number_format($total_actual, 2); ?></h2>

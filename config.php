@@ -1,7 +1,10 @@
 <?php
+// Cargar credenciales
+require_once 'credentials.php';
+
 // Conexión PDO con manejo de errores
 try {
-    $pdo = new PDO("mysql:host=localhost;dbname=cashflow_db;charset=utf8mb4", "root", "");
+    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Error de conexión: " . $e->getMessage());
@@ -109,9 +112,68 @@ if (count($grafica_sql) > 1) {
     $gasto_promedio = $dias_periodo > 0 ? $diferencia_total / $dias_periodo : 0;
 }
 
+// Calcular variación mensual (diferencia entre las dos últimas capturas)
+$variacion_mensual = 0;
+$variacion_mensual_porcentaje = 0;
+if (count($grafica_sql) >= 2) {
+    $datos_temp = $grafica_sql;
+    $ultimo = array_pop($datos_temp);
+    $penultimo = array_pop($datos_temp);
+    $variacion_mensual = $ultimo['total'] - $penultimo['total'];
+    if ($penultimo['total'] > 0) {
+        $variacion_mensual_porcentaje = ($variacion_mensual / $penultimo['total']) * 100;
+    }
+}
+
 // Obtener mes y año seleccionado (por defecto el actual)
 $mes_filtro = $_GET['mes'] ?? date('m');
 $anio_filtro = $_GET['anio'] ?? date('Y');
+
+// Obtener años disponibles dinámicamente desde la base de datos
+$anios_disponibles = $pdo->query("
+    SELECT DISTINCT YEAR(fecha_captura) as anio 
+    FROM saldos 
+    ORDER BY anio DESC
+")->fetchAll(PDO::FETCH_COLUMN);
+
+// Filtros para gráfica de evolución por cuenta
+$cuenta_filtro = $_GET['cuenta_filtro'] ?? 'todas';
+$anio_cuenta_filtro = $_GET['anio_cuenta_filtro'] ?? 'todos';
+
+// Datos para la gráfica de evolución por cuenta
+$grafica_cuenta_sql = [];
+$condicion_anio_cuenta = $anio_cuenta_filtro === 'todos' ? 'YEAR(fecha_captura) >= 2023' : 'YEAR(fecha_captura) = ' . intval($anio_cuenta_filtro);
+
+if ($cuenta_filtro === 'todas') {
+    // Obtener datos de todas las cuentas
+    $stmt_todas = $pdo->query("
+        SELECT 
+            c.id as cuenta_id,
+            c.nombre as cuenta_nombre,
+            c.tipo,
+            DATE_FORMAT(s.fecha_captura, '%b %y') as mes,
+            s.fecha_captura,
+            s.monto
+        FROM saldos s
+        JOIN cuentas c ON s.cuenta_id = c.id
+        WHERE $condicion_anio_cuenta
+        ORDER BY c.nombre ASC, s.fecha_captura ASC
+    ");
+    $grafica_cuenta_sql = $stmt_todas->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    // Obtener datos de una cuenta específica
+    $stmt_cuenta = $pdo->prepare("
+        SELECT 
+            DATE_FORMAT(fecha_captura, '%b %y') as mes,
+            fecha_captura,
+            monto
+        FROM saldos
+        WHERE cuenta_id = ? AND $condicion_anio_cuenta
+        ORDER BY fecha_captura ASC
+    ");
+    $stmt_cuenta->execute([$cuenta_filtro]);
+    $grafica_cuenta_sql = $stmt_cuenta->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // Consulta filtrada para la tabla
 $stmt_tabla = $pdo->prepare("

@@ -70,6 +70,18 @@
                         </h4>
                     </div>
                 </div>
+                <div class="col-md-3">
+                    <div class="card p-3">
+                        <small class="text-muted">VARIACIÓN MENSUAL</small>
+                        <h4 class="fw-bold <?php echo $variacion_mensual >= 0 ? 'text-success' : 'text-danger'; ?>">
+                            <?php echo $variacion_mensual >= 0 ? '+' : ''; ?>$<?php echo number_format(abs($variacion_mensual), 2); ?>
+                        </h4>
+                        <small class="<?php echo $variacion_mensual >= 0 ? 'text-success' : 'text-danger'; ?>">
+                            <?php echo $variacion_mensual >= 0 ? '↑' : '↓'; ?>
+                            <?php echo number_format(abs($variacion_mensual_porcentaje), 1); ?>%
+                        </small>
+                    </div>
+                </div>
             </div>
             <div class="col-lg-8">
                 <div class="card p-4 mb-4" style="height: 500px; display: flex; flex-direction: column;">
@@ -103,18 +115,11 @@
                                 <option value="todos"
                                     <?php if(!isset($_GET['anio_grafica']) || $_GET['anio_grafica'] == 'todos') echo 'selected'; ?>>
                                     Todos</option>
-                                <option value="2023"
-                                    <?php if(isset($_GET['anio_grafica']) && $_GET['anio_grafica'] == '2023') echo 'selected'; ?>>
-                                    2023</option>
-                                <option value="2024"
-                                    <?php if(isset($_GET['anio_grafica']) && $_GET['anio_grafica'] == '2024') echo 'selected'; ?>>
-                                    2024</option>
-                                <option value="2025"
-                                    <?php if(isset($_GET['anio_grafica']) && $_GET['anio_grafica'] == '2025') echo 'selected'; ?>>
-                                    2025</option>
-                                <option value="2026"
-                                    <?php if(isset($_GET['anio_grafica']) && $_GET['anio_grafica'] == '2026') echo 'selected'; ?>>
-                                    2026</option>
+                                <?php foreach($anios_disponibles as $anio): ?>
+                                <option value="<?php echo $anio; ?>"
+                                    <?php if(isset($_GET['anio_grafica']) && $_GET['anio_grafica'] == $anio) echo 'selected'; ?>>
+                                    <?php echo $anio; ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </form>
                     </div>
@@ -122,6 +127,49 @@
                         <canvas id="mainChart"></canvas>
                     </div>
                 </div>
+
+                <!-- Gráfica de Evolución por Cuenta -->
+                <div class="card p-4 mb-4 mt-4" style="height: 400px; display: flex; flex-direction: column;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Evolución por Cuenta</h5>
+                        <form method="GET" class="d-flex gap-2">
+                            <?php if(isset($_GET['anio_grafica'])): ?>
+                            <input type="hidden" name="anio_grafica" value="<?php echo $_GET['anio_grafica']; ?>">
+                            <?php endif; ?>
+                            <select name="cuenta_filtro" class="form-select form-select-sm">
+                                <option value="todas" <?php if($cuenta_filtro == 'todas') echo 'selected'; ?>>Todas las
+                                    cuentas</option>
+                                <?php foreach($cuentas as $c): ?>
+                                <option value="<?php echo $c['id']; ?>"
+                                    <?php if($cuenta_filtro == $c['id']) echo 'selected'; ?>>
+                                    <?php echo $c['nombre']; ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <select name="anio_cuenta_filtro" class="form-select form-select-sm">
+                                <option value="todos" <?php if($anio_cuenta_filtro == 'todos') echo 'selected'; ?>>Todos
+                                </option>
+                                <?php foreach($anios_disponibles as $anio): ?>
+                                <option value="<?php echo $anio; ?>"
+                                    <?php if($anio_cuenta_filtro == $anio) echo 'selected'; ?>>
+                                    <?php echo $anio; ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
+                        </form>
+                    </div>
+                    <div style="flex: 1; position: relative;">
+                        <?php if(!empty($grafica_cuenta_sql)): ?>
+                        <canvas id="cuentaChart"></canvas>
+                        <?php else: ?>
+                        <div class="d-flex align-items-center justify-content-center h-100">
+                            <p class="text-muted">Selecciona una cuenta para ver su evolución</p>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="card p-4 shadow-sm">
@@ -139,14 +187,12 @@
                         ?>
                                     </select>
                                     <select name="anio" class="form-select form-select-sm">
-                                        <option value="2023" <?php if($anio_filtro == '2023') echo 'selected'; ?>>2023
+                                        <?php foreach($anios_disponibles as $anio): ?>
+                                        <option value="<?php echo $anio; ?>"
+                                            <?php if($anio_filtro == $anio) echo 'selected'; ?>>
+                                            <?php echo $anio; ?>
                                         </option>
-                                        <option value="2024" <?php if($anio_filtro == '2024') echo 'selected'; ?>>2024
-                                        </option>
-                                        <option value="2025" <?php if($anio_filtro == '2025') echo 'selected'; ?>>2025
-                                        </option>
-                                        <option value="2026" <?php if($anio_filtro == '2026') echo 'selected'; ?>>2026
-                                        </option>
+                                        <?php endforeach; ?>
                                     </select>
                                     <button type="submit" class="btn btn-sm btn-secondary">Filtrar</button>
                                 </form>
@@ -284,6 +330,125 @@
             }
         }
     });
+
+    <?php if(!empty($grafica_cuenta_sql)): ?>
+    // Gráfica de evolución por cuenta
+    const ctxCuenta = document.getElementById('cuentaChart').getContext('2d');
+
+    <?php if($cuenta_filtro === 'todas'): ?>
+    // Preparar datos para múltiples cuentas
+    const cuentasData = <?php 
+        $cuentas_agrupadas = [];
+        foreach ($grafica_cuenta_sql as $registro) {
+            $cuenta_id = $registro['cuenta_id'];
+            if (!isset($cuentas_agrupadas[$cuenta_id])) {
+                $cuentas_agrupadas[$cuenta_id] = [
+                    'nombre' => $registro['cuenta_nombre'],
+                    'fechas' => [],
+                    'montos' => []
+                ];
+            }
+            $cuentas_agrupadas[$cuenta_id]['fechas'][] = $registro['mes'];
+            $cuentas_agrupadas[$cuenta_id]['montos'][] = floatval($registro['monto']);
+        }
+        
+        // Obtener todas las fechas únicas
+        $todas_fechas = [];
+        foreach ($grafica_cuenta_sql as $registro) {
+            if (!in_array($registro['mes'], $todas_fechas)) {
+                $todas_fechas[] = $registro['mes'];
+            }
+        }
+        
+        echo json_encode([
+            'cuentas' => array_values($cuentas_agrupadas),
+            'fechas' => $todas_fechas
+        ]);
+    ?>;
+
+    const colores = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+    const datasets = cuentasData.cuentas.map((cuenta, index) => ({
+        label: cuenta.nombre,
+        data: cuenta.montos,
+        borderColor: colores[index % colores.length],
+        tension: 0.4,
+        fill: false
+    }));
+
+    new Chart(ctxCuenta, {
+        type: 'line',
+        data: {
+            labels: cuentasData.fechas,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        maxTicksLimit: 10,
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+    <?php else: ?>
+    // Gráfica de una sola cuenta
+    new Chart(ctxCuenta, {
+        type: 'line',
+        data: {
+            labels: <?php echo json_encode(array_column($grafica_cuenta_sql, 'mes')); ?>,
+            datasets: [{
+                label: 'Saldo de Cuenta',
+                data: <?php echo json_encode(array_column($grafica_cuenta_sql, 'monto')); ?>,
+                borderColor: '#10b981',
+                tension: 0.4,
+                fill: true,
+                backgroundColor: 'rgba(16, 185, 129, 0.1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        maxTicksLimit: 10,
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Saldo: $' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+    <?php endif; ?>
+    <?php endif; ?>
     </script>
 </body>
 

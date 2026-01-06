@@ -45,6 +45,7 @@ require_once 'config.php';
             </div>
             <div class="col-md-4">
                 <div class="d-flex gap-2 justify-content-end mb-2">
+                    <a href="flujo.php" class="btn btn-sm btn-outline-success">💰 Flujo de Efectivo</a>
                     <span class="text-muted">👤 <?php echo htmlspecialchars($_SESSION['username']); ?></span>
                     <a href="auth.php?logout=1" class="text-danger text-decoration-none" title="Cerrar sesión">
                         Salir →
